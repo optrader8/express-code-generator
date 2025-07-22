@@ -33,7 +33,7 @@ Express Code Generator는 OpenAPI/Swagger 명세서를 입력으로 받아 잘 �
 
 ```bash
 # 저장소 복제
-git clone https://github.com/yourusername/express-code-generator.git
+git clone https://github.com/optrader8/express-code-generator.git
 
 # 프로젝트 디렉토리로 이동
 cd express-code-generator
@@ -90,11 +90,13 @@ npm install -g .
 ### Git 저장소에서 직접 설치
 
 ```bash
-npm install -g https://github.com/yourusername/express-code-generator.git
+npm install -g https://github.com/optrader8/express-code-generator.git
 ```
 
 
 ## 빠른 시작
+
+다음 단계를 따라 Express 프로젝트를 빠르게 생성해 보세요:
 
 1. OpenAPI/Swagger 명세서 준비 (예: swagger.json 또는 openapi.yaml)
 2. 다음 명령으로 프로젝트 생성:
@@ -118,7 +120,7 @@ npm run dev
 
 ## 명령어 옵션
 
-```
+```bash
 사용법: express-gen [명령] [옵션]
 
 명령:
@@ -140,7 +142,9 @@ npm run dev
 
 ## 생성된 프로젝트 구조
 
-```
+Express Code Generator가 생성하는 프로젝트는 다음과 같은 구조를 가집니다:
+
+```plaintext
 my-api/
 ├── src/
 │   ├── api/             # API 라우트 정의
@@ -170,7 +174,7 @@ my-api/
 
 ## 데이터베이스 설정
 
-Express Code Generator는 여러 데이터베이스를 지원합니다:
+Express Code Generator는 다음과 같은 여러 데이터베이스를 지원합니다:
 
 ### SQLite (기본값)
 
@@ -206,7 +210,9 @@ express-gen create --spec swagger.json --db mysql
 
 ## 예제: 사용자 API 생성
 
-OpenAPI 명세서 예시:
+다음은 간단한 사용자 API를 생성하는 예제입니다.
+
+### OpenAPI 명세서 예시
 
 ```yaml
 openapi: 3.0.0
@@ -271,7 +277,9 @@ components:
         - password
 ```
 
-이 명세서로 프로젝트 생성:
+### 프로젝트 생성
+
+위 명세서를 `user-api.yaml` 파일로 저장한 후 다음 명령으로 프로젝트를 생성합니다:
 
 ```bash
 express-gen create --spec user-api.yaml --output user-api
@@ -279,7 +287,7 @@ express-gen create --spec user-api.yaml --output user-api
 
 ## 테스트 실행
 
-생성된 프로젝트에서 테스트를 실행할 수 있습니다:
+[생성된 프로젝트](#생성된-프로젝트-구조)에서 테스트를 실행할 수 있습니다:
 
 ```bash
 cd my-api
@@ -287,6 +295,8 @@ npm test
 ```
 
 ## 고급 사용법
+
+Express Code Generator의 고급 기능을 활용하여 더 많은 사용자 정의 옵션을 적용할 수 있습니다.
 
 ### 사용자 정의 템플릿
 
@@ -298,7 +308,7 @@ express-gen create --spec swagger.json --template-dir ./my-templates
 
 ### 기존 프로젝트에 리소스 추가
 
-이미 생성된 프로젝트에 새 리소스 추가:
+이미 [생성된 프로젝트](#생성된-프로젝트-구조)에 새 리소스 추가:
 
 ```bash
 express-gen add --spec new-resource.yaml --output existing-project
@@ -306,9 +316,11 @@ express-gen add --spec new-resource.yaml --output existing-project
 
 ## 문제 해결
 
+다음은 일반적인 문제와 해결 방법입니다:
+
 ### 데이터베이스 연결 오류
 
-- `.env` 파일의 데이터베이스 설정을 확인하세요
+- [`.env` 파일](#생성된-프로젝트-구조)의 데이터베이스 설정을 확인하세요
 - 데이터베이스 서버가 실행 중인지 확인하세요
 - 필요한 의존성을 설치했는지 확인하세요:
   - MongoDB: `npm install mongoose`
@@ -331,7 +343,7 @@ express-gen --debug
 
 ## 기여하기
 
-기여는 언제나 환영합니다!
+기여는 언제나 환영합니다! 다음 단계를 따라 프로젝트에 기여해 주세요:
 
 1. 저장소 포크
 2. 기능 브랜치 생성 (`git checkout -b feature/amazing-feature`)
@@ -341,4 +353,4 @@ express-gen --debug
 
 ## 라이선스
 
-이 프로젝트는 MIT 라이선스를 따릅니다 - 자세한 내용은 LICENSE 파일을 참조하세요.
+이 프로젝트는 MIT 라이선스를 따릅니다.
