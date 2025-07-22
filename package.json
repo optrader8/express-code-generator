@@ -3,9 +3,15 @@
   "version": "1.0.0",
   "description": "OpenAPI/Swagger 명세서로부터 모듈식 Express.js API 프로젝트를 생성하는 도구",
   "main": "src/app.js",
+  "type": "commonjs",
   "bin": {
     "express-gen": "./bin/cli.js"
   },
+  "files": [
+    "bin/",
+    "src/",
+    "README.md"
+  ],
   "scripts": {
     "start": "node src/app.js",
     "dev": "nodemon src/app.js",

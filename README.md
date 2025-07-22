@@ -56,6 +56,43 @@ npm install -g express-code-generator
 # 로컬 프로젝트에 설치
 npm install express-code-generator --save-dev
 ```
+### 로컬 소스 전달 시 전역 설치 방법 (압축 파일 배포)
+
+압축 파일(zip/tar)로 배포받은 경우:
+
+```bash
+# 1. 압축 파일 해제 후 폴더로 이동
+unzip express-code-generator-main.zip
+cd express-code-generator-main
+
+# 2. 의존성 설치
+npm install
+
+# 3. 전역 설치
+npm install -g .
+```
+
+또는 프로젝트 폴더만 받은 경우:
+
+```bash
+# 1. 폴더 내로 이동
+cd express-code-generator
+
+# 2. 의존성 설치
+npm install
+
+# 3. 전역 설치
+npm install -g .
+```
+
+설치 후, 어디서든 `express-gen` 명령을 사용할 수 있습니다.
+
+### Git 저장소에서 직접 설치
+
+```bash
+npm install -g https://github.com/yourusername/express-code-generator.git
+```
+
 
 ## 빠른 시작
 
