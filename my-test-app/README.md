@@ -28,7 +28,9 @@ npm start
 
 ### API 문서
 
-API 문서는 서버 실행 후 `/api-docs`에서 확인할 수 있습니다.
+- **OpenAPI 명세서**: `swagger.json` 파일 참조
+- **API 문서**: `docs/api.md` 파일 참조
+- **Swagger UI**: 서버 실행 후 `/api-docs`에서 확인 가능
 
 ### 테스트
 
@@ -43,7 +45,26 @@ npm test
 - **인증**: `/api/v1/auth/*`
 - **사용자 관리**: `/api/v1/users/*`
 
-자세한 API 문서는 OpenAPI 명세서를 참조하세요.
+자세한 API 문서는 `docs/api.md` 또는 `swagger.json` 명세서를 참조하세요.
+
+## 프로젝트 구조
+
+```
+my-test-app/
+├── src/
+│   ├── api/           # API 라우트
+│   ├── config/        # 설정 파일
+│   ├── middlewares/   # 미들웨어
+│   ├── models/        # 데이터 모델
+│   ├── repositories/  # 데이터 액세스 계층
+│   ├── services/      # 비즈니스 로직
+│   └── app.js         # 메인 애플리케이션
+├── docs/              # API 문서
+├── tests/             # 테스트 파일
+├── swagger.json       # OpenAPI 명세서
+├── .env              # 환경 변수
+└── package.json      # 프로젝트 설정
+```
 
 ## 데이터베이스
 

@@ -269,6 +269,12 @@ Thumbs.db
 
     this.writeFile('.gitignore', gitignoreContent);
 
+    // swagger.json 파일을 루트에 복사
+    await this.copySwaggerSpec();
+
+    // API 문서 생성
+    await this.generateApiDocumentation();
+
     // README.md 생성
     const readmeContent = `# ${this.projectName}
 
@@ -300,7 +306,9 @@ npm start
 
 ### API 문서
 
-API 문서는 서버 실행 후 \`/api-docs\`에서 확인할 수 있습니다.
+- **OpenAPI 명세서**: \`swagger.json\` 파일 참조
+- **API 문서**: \`docs/api.md\` 파일 참조
+- **Swagger UI**: 서버 실행 후 \`/api-docs\`에서 확인 가능
 
 ### 테스트
 
@@ -315,7 +323,26 @@ npm test
 - **인증**: \`/api/v1/auth/*\`
 - **사용자 관리**: \`/api/v1/users/*\`
 
-자세한 API 문서는 OpenAPI 명세서를 참조하세요.
+자세한 API 문서는 \`docs/api.md\` 또는 \`swagger.json\` 명세서를 참조하세요.
+
+## 프로젝트 구조
+
+\`\`\`
+${this.projectName}/
+├── src/
+│   ├── api/           # API 라우트
+│   ├── config/        # 설정 파일
+│   ├── middlewares/   # 미들웨어
+│   ├── models/        # 데이터 모델
+│   ├── repositories/  # 데이터 액세스 계층
+│   ├── services/      # 비즈니스 로직
+│   └── app.js         # 메인 애플리케이션
+├── docs/              # API 문서
+├── tests/             # 테스트 파일
+├── swagger.json       # OpenAPI 명세서
+├── .env              # 환경 변수
+└── package.json      # 프로젝트 설정
+\`\`\`
 
 ## 데이터베이스
 
@@ -335,6 +362,248 @@ MIT License
 `;
 
     this.writeFile('README.md', readmeContent);
+  }
+
+  async copySwaggerSpec() {
+    try {
+      const specContent = JSON.stringify(this.spec, null, 2);
+      this.writeFile('swagger.json', specContent);
+      console.log(chalk.gray(`📋 복사됨: swagger.json`));
+    } catch (error) {
+      console.log(chalk.yellow(`⚠️  Swagger 스펙 복사 실패: ${error.message}`));
+    }
+  }
+
+  async generateApiDocumentation() {
+    const apiDoc = this.generateMarkdownApiDoc();
+    this.writeFile('docs/api.md', apiDoc);
+    console.log(chalk.gray(`📚 생성됨: docs/api.md`));
+  }
+
+  generateMarkdownApiDoc() {
+    const spec = this.spec;
+    let markdown = `# ${spec.info?.title || 'API Documentation'}
+
+${spec.info?.description || ''}
+
+**버전**: ${spec.info?.version || '1.0.0'}
+
+---
+
+## 목차
+
+- [개요](#개요)
+- [인증](#인증)
+- [서버 정보](#서버-정보)
+- [API 엔드포인트](#api-엔드포인트)
+- [데이터 모델](#데이터-모델)
+- [오류 코드](#오류-코드)
+
+---
+
+## 개요
+
+이 API는 ${spec.info?.description || 'RESTful 웹 서비스'}를 제공합니다.
+
+### 기본 정보
+
+- **API 버전**: ${spec.info?.version || '1.0.0'}
+- **기본 Content-Type**: \`application/json\`
+- **문자 인코딩**: UTF-8
+
+`;
+
+    // 인증 정보
+    if (spec.components?.securitySchemes) {
+      markdown += `## 인증
+
+`;
+      Object.entries(spec.components.securitySchemes).forEach(([name, scheme]) => {
+        markdown += `### ${name}
+
+- **타입**: ${scheme.type}
+- **스키마**: ${scheme.scheme || 'N/A'}
+- **설명**: ${scheme.description || ''}
+
+`;
+      });
+    }
+
+    // 서버 정보
+    if (spec.servers && spec.servers.length > 0) {
+      markdown += `## 서버 정보
+
+| 환경 | URL | 설명 |
+|------|-----|------|
+`;
+      spec.servers.forEach(server => {
+        markdown += `| ${server.description || 'Unknown'} | \`${server.url}\` | ${server.description || ''} |
+`;
+      });
+      markdown += `
+`;
+    }
+
+    // API 엔드포인트
+    markdown += `## API 엔드포인트
+
+`;
+
+    if (spec.paths) {
+      Object.entries(spec.paths).forEach(([path, pathItem]) => {
+        Object.entries(pathItem).forEach(([method, operation]) => {
+          if (typeof operation === 'object' && operation.operationId) {
+            markdown += `### ${method.toUpperCase()} ${path}
+
+**${operation.summary || operation.operationId}**
+
+${operation.description || ''}
+
+`;
+
+            // 태그
+            if (operation.tags && operation.tags.length > 0) {
+              markdown += `**태그**: ${operation.tags.join(', ')}
+
+`;
+            }
+
+            // 요청 파라미터
+            if (operation.parameters && operation.parameters.length > 0) {
+              markdown += `**파라미터**:
+
+| 이름 | 위치 | 타입 | 필수 | 설명 |
+|------|------|------|------|------|
+`;
+              operation.parameters.forEach(param => {
+                const required = param.required ? '✅' : '❌';
+                const type = param.schema?.type || 'string';
+                markdown += `| \`${param.name}\` | ${param.in} | ${type} | ${required} | ${param.description || ''} |
+`;
+              });
+              markdown += `
+`;
+            }
+
+            // 요청 바디
+            if (operation.requestBody) {
+              markdown += `**요청 바디**:
+
+`;
+              if (operation.requestBody.content) {
+                Object.entries(operation.requestBody.content).forEach(([mediaType, content]) => {
+                  markdown += `- **Content-Type**: \`${mediaType}\`
+`;
+                  if (content.schema && content.schema.$ref) {
+                    const schemaName = content.schema.$ref.split('/').pop();
+                    markdown += `- **스키마**: [${schemaName}](#${schemaName.toLowerCase()})
+`;
+                  }
+                });
+              }
+              markdown += `
+`;
+            }
+
+            // 응답
+            if (operation.responses) {
+              markdown += `**응답**:
+
+| 상태 코드 | 설명 | 스키마 |
+|-----------|------|--------|
+`;
+              Object.entries(operation.responses).forEach(([statusCode, response]) => {
+                let schemaInfo = '';
+                if (response.content) {
+                  Object.entries(response.content).forEach(([mediaType, content]) => {
+                    if (content.schema && content.schema.$ref) {
+                      const schemaName = content.schema.$ref.split('/').pop();
+                      schemaInfo = `[${schemaName}](#${schemaName.toLowerCase()})`;
+                    }
+                  });
+                }
+                markdown += `| ${statusCode} | ${response.description || ''} | ${schemaInfo} |
+`;
+              });
+              markdown += `
+`;
+            }
+
+            markdown += `---
+
+`;
+          }
+        });
+      });
+    }
+
+    // 데이터 모델
+    if (spec.components?.schemas) {
+      markdown += `## 데이터 모델
+
+`;
+      Object.entries(spec.components.schemas).forEach(([schemaName, schema]) => {
+        markdown += `### ${schemaName}
+
+${schema.description || ''}
+
+`;
+        if (schema.type === 'object' && schema.properties) {
+          markdown += `**속성**:
+
+| 필드명 | 타입 | 필수 | 설명 |
+|--------|------|------|------|
+`;
+          Object.entries(schema.properties).forEach(([propName, prop]) => {
+            const required = schema.required && schema.required.includes(propName) ? '✅' : '❌';
+            const type = prop.type || (prop.$ref ? prop.$ref.split('/').pop() : 'object');
+            markdown += `| \`${propName}\` | ${type} | ${required} | ${prop.description || ''} |
+`;
+          });
+          markdown += `
+`;
+        }
+
+        if (schema.example) {
+          markdown += `**예시**:
+
+\`\`\`json
+${JSON.stringify(schema.example, null, 2)}
+\`\`\`
+
+`;
+        }
+
+        markdown += `---
+
+`;
+      });
+    }
+
+    // 오류 코드
+    markdown += `## 오류 코드
+
+이 API는 표준 HTTP 상태 코드를 사용합니다:
+
+| 상태 코드 | 설명 |
+|-----------|------|
+| 200 | 성공 |
+| 201 | 생성됨 |
+| 400 | 잘못된 요청 |
+| 401 | 인증 실패 |
+| 403 | 권한 없음 |
+| 404 | 리소스를 찾을 수 없음 |
+| 409 | 충돌 |
+| 422 | 처리할 수 없는 엔티티 |
+| 429 | 요청 제한 초과 |
+| 500 | 내부 서버 오류 |
+
+---
+
+*이 문서는 OpenAPI 명세서로부터 자동 생성되었습니다.*
+`;
+
+    return markdown;
   }
 
   copyFile(source, destination) {

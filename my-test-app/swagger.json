@@ -1,0 +1,2648 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Universal Auth API",
+    "description": "범용 인증 시스템 API - 다양한 프로젝트에서 재사용 가능한 인증 및 사용자 관리 시스템",
+    "version": "1.0.0",
+    "contact": {
+      "name": "API Support",
+      "email": "support@yourcompany.com",
+      "url": "https://docs.yourcompany.com/auth-api"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    },
+    "termsOfService": "https://yourcompany.com/terms"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000/api/v1",
+      "description": "Development server"
+    },
+    {
+      "url": "https://staging-api.yourcompany.com/v1",
+      "description": "Staging server"
+    },
+    {
+      "url": "https://api.yourcompany.com/v1",
+      "description": "Production server"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT 액세스 토큰을 Authorization 헤더에 Bearer 스키마로 포함"
+      },
+      "apiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": "서비스 간 통신용 API 키"
+      }
+    },
+    "parameters": {
+      "limitParam": {
+        "name": "limit",
+        "in": "query",
+        "description": "반환할 항목 수 제한 (최대 100)",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 20
+        }
+      },
+      "offsetParam": {
+        "name": "offset",
+        "in": "query",
+        "description": "건너뛸 항목 수",
+        "schema": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        }
+      },
+      "searchParam": {
+        "name": "search",
+        "in": "query",
+        "description": "검색 키워드",
+        "schema": {
+          "type": "string",
+          "maxLength": 100
+        }
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "인증 실패",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "권한 없음",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "리소스를 찾을 수 없음",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "ValidationError": {
+        "description": "입력 검증 실패",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ValidationError"
+            }
+          }
+        }
+      },
+      "TooManyRequests": {
+        "description": "요청 제한 초과",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        },
+        "headers": {
+          "X-RateLimit-Limit": {
+            "description": "시간 창 내 허용된 요청 수",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          "X-RateLimit-Remaining": {
+            "description": "남은 요청 수",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          "X-RateLimit-Reset": {
+            "description": "리셋 시간 (Unix timestamp)",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "User": {
+        "type": "object",
+        "description": "사용자 정보",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "사용자 고유 식별자"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "이메일 주소"
+          },
+          "username": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 30,
+            "pattern": "^[a-zA-Z0-9_]+$",
+            "description": "사용자명 (영숫자와 언더스코어만 허용)"
+          },
+          "firstName": {
+            "type": "string",
+            "maxLength": 50,
+            "description": "이름"
+          },
+          "lastName": {
+            "type": "string",
+            "maxLength": 50,
+            "description": "성"
+          },
+          "avatar": {
+            "type": "string",
+            "format": "uri",
+            "description": "프로필 이미지 URL"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "user",
+              "admin",
+              "moderator"
+            ],
+            "description": "사용자 역할"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "inactive",
+              "suspended",
+              "deleted"
+            ],
+            "description": "계정 상태"
+          },
+          "emailVerified": {
+            "type": "boolean",
+            "description": "이메일 인증 여부"
+          },
+          "twoFactorEnabled": {
+            "type": "boolean",
+            "description": "2FA 활성화 여부"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "계정 생성 시간"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "마지막 수정 시간"
+          },
+          "lastLoginAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "마지막 로그인 시간"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "role",
+          "status",
+          "emailVerified",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "SignupRequest": {
+        "type": "object",
+        "description": "회원가입 요청",
+        "required": [
+          "email",
+          "password"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "이메일 주소"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 128,
+            "description": "비밀번호 (최소 8자)"
+          },
+          "username": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 30,
+            "pattern": "^[a-zA-Z0-9_]+$",
+            "description": "사용자명 (선택사항)"
+          },
+          "firstName": {
+            "type": "string",
+            "maxLength": 50,
+            "description": "이름 (선택사항)"
+          },
+          "lastName": {
+            "type": "string",
+            "maxLength": 50,
+            "description": "성 (선택사항)"
+          },
+          "acceptTerms": {
+            "type": "boolean",
+            "description": "이용약관 동의 여부"
+          }
+        },
+        "example": {
+          "email": "user@example.com",
+          "password": "SecurePassword123!",
+          "username": "john_doe",
+          "firstName": "John",
+          "lastName": "Doe",
+          "acceptTerms": true
+        }
+      },
+      "SigninRequest": {
+        "type": "object",
+        "description": "로그인 요청",
+        "required": [
+          "email",
+          "password"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "이메일 주소"
+          },
+          "password": {
+            "type": "string",
+            "description": "비밀번호"
+          },
+          "rememberMe": {
+            "type": "boolean",
+            "default": false,
+            "description": "로그인 상태 유지 여부"
+          },
+          "twoFactorCode": {
+            "type": "string",
+            "pattern": "^[0-9]{6}$",
+            "description": "2FA 코드 (2FA 활성화 시 필수)"
+          }
+        },
+        "example": {
+          "email": "user@example.com",
+          "password": "SecurePassword123!",
+          "rememberMe": true
+        }
+      },
+      "TokenResponse": {
+        "type": "object",
+        "description": "토큰 응답",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "JWT 액세스 토큰"
+          },
+          "refreshToken": {
+            "type": "string",
+            "description": "리프레시 토큰"
+          },
+          "tokenType": {
+            "type": "string",
+            "default": "Bearer",
+            "description": "토큰 타입"
+          },
+          "expiresIn": {
+            "type": "integer",
+            "description": "액세스 토큰 만료 시간 (초)"
+          },
+          "user": {
+            "$ref": "#/components/schemas/User"
+          }
+        },
+        "required": [
+          "accessToken",
+          "refreshToken",
+          "tokenType",
+          "expiresIn",
+          "user"
+        ]
+      },
+      "RefreshTokenRequest": {
+        "type": "object",
+        "description": "토큰 갱신 요청",
+        "required": [
+          "refreshToken"
+        ],
+        "properties": {
+          "refreshToken": {
+            "type": "string",
+            "description": "리프레시 토큰"
+          }
+        }
+      },
+      "PasswordResetRequest": {
+        "type": "object",
+        "description": "비밀번호 재설정 요청",
+        "required": [
+          "email"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "등록된 이메일 주소"
+          }
+        }
+      },
+      "PasswordResetConfirm": {
+        "type": "object",
+        "description": "비밀번호 재설정 확인",
+        "required": [
+          "token",
+          "newPassword"
+        ],
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "이메일로 받은 재설정 토큰"
+          },
+          "newPassword": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 128,
+            "description": "새 비밀번호"
+          }
+        }
+      },
+      "UpdateProfileRequest": {
+        "type": "object",
+        "description": "프로필 수정 요청",
+        "properties": {
+          "username": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 30,
+            "pattern": "^[a-zA-Z0-9_]+$",
+            "description": "사용자명"
+          },
+          "firstName": {
+            "type": "string",
+            "maxLength": 50,
+            "description": "이름"
+          },
+          "lastName": {
+            "type": "string",
+            "maxLength": 50,
+            "description": "성"
+          },
+          "avatar": {
+            "type": "string",
+            "format": "uri",
+            "description": "프로필 이미지 URL"
+          }
+        }
+      },
+      "ChangePasswordRequest": {
+        "type": "object",
+        "description": "비밀번호 변경 요청",
+        "required": [
+          "currentPassword",
+          "newPassword"
+        ],
+        "properties": {
+          "currentPassword": {
+            "type": "string",
+            "description": "현재 비밀번호"
+          },
+          "newPassword": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 128,
+            "description": "새 비밀번호"
+          }
+        }
+      },
+      "Session": {
+        "type": "object",
+        "description": "사용자 세션 정보",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "세션 ID"
+          },
+          "deviceInfo": {
+            "type": "string",
+            "description": "디바이스 정보"
+          },
+          "ipAddress": {
+            "type": "string",
+            "format": "ipv4",
+            "description": "IP 주소"
+          },
+          "location": {
+            "type": "string",
+            "description": "접속 위치 (국가/도시)"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "세션 생성 시간"
+          },
+          "lastAccessAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "마지막 접근 시간"
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "활성 상태"
+          },
+          "isCurrent": {
+            "type": "boolean",
+            "description": "현재 세션 여부"
+          }
+        }
+      },
+      "SecurityLog": {
+        "type": "object",
+        "description": "보안 로그",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "로그 ID"
+          },
+          "eventType": {
+            "type": "string",
+            "enum": [
+              "login_success",
+              "login_failed",
+              "logout",
+              "password_changed",
+              "profile_updated",
+              "email_verified",
+              "account_locked",
+              "account_unlocked",
+              "2fa_enabled",
+              "2fa_disabled"
+            ],
+            "description": "이벤트 타입"
+          },
+          "ipAddress": {
+            "type": "string",
+            "format": "ipv4",
+            "description": "IP 주소"
+          },
+          "userAgent": {
+            "type": "string",
+            "description": "사용자 에이전트 정보"
+          },
+          "location": {
+            "type": "string",
+            "description": "접속 위치"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "이벤트 발생 시간"
+          },
+          "details": {
+            "type": "object",
+            "description": "추가 상세 정보"
+          }
+        }
+      },
+      "NotificationSettings": {
+        "type": "object",
+        "description": "알림 설정",
+        "properties": {
+          "emailNotifications": {
+            "type": "boolean",
+            "default": true,
+            "description": "이메일 알림 활성화"
+          },
+          "securityAlerts": {
+            "type": "boolean",
+            "default": true,
+            "description": "보안 경고 알림"
+          },
+          "marketingEmails": {
+            "type": "boolean",
+            "default": false,
+            "description": "마케팅 이메일 수신"
+          },
+          "systemUpdates": {
+            "type": "boolean",
+            "default": true,
+            "description": "시스템 업데이트 알림"
+          },
+          "loginAlerts": {
+            "type": "boolean",
+            "default": false,
+            "description": "새로운 로그인 알림"
+          }
+        }
+      },
+      "ApiKey": {
+        "type": "object",
+        "description": "API 키 정보",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "API 키 ID"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "description": "API 키 이름"
+          },
+          "keyPrefix": {
+            "type": "string",
+            "description": "키 앞부분 (보안상 일부만 표시)"
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "API 키 권한 목록"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "만료 시간 (null이면 무제한)"
+          },
+          "lastUsedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "마지막 사용 시간"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "생성 시간"
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "활성 상태"
+          }
+        }
+      },
+      "CreateApiKeyRequest": {
+        "type": "object",
+        "description": "API 키 생성 요청",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "description": "API 키 이름"
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "read",
+                "write",
+                "delete",
+                "admin"
+              ]
+            },
+            "description": "권한 목록"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "만료 시간 (선택사항)"
+          }
+        }
+      },
+      "TwoFactorSetup": {
+        "type": "object",
+        "description": "2FA 설정 정보",
+        "properties": {
+          "qrCode": {
+            "type": "string",
+            "description": "QR 코드 데이터 URL"
+          },
+          "secret": {
+            "type": "string",
+            "description": "TOTP 시크릿 키"
+          },
+          "backupCodes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "백업 코드 목록"
+          }
+        }
+      },
+      "TwoFactorVerify": {
+        "type": "object",
+        "description": "2FA 검증 요청",
+        "required": [
+          "code"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "pattern": "^[0-9]{6}$",
+            "description": "6자리 TOTP 코드"
+          }
+        }
+      },
+      "HealthStatus": {
+        "type": "object",
+        "description": "시스템 상태",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "healthy",
+              "degraded",
+              "unhealthy"
+            ],
+            "description": "전체 시스템 상태"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "상태 체크 시간"
+          },
+          "services": {
+            "type": "object",
+            "description": "각 서비스 상태",
+            "properties": {
+              "database": {
+                "type": "string",
+                "enum": [
+                  "up",
+                  "down",
+                  "degraded"
+                ],
+                "description": "데이터베이스 상태"
+              },
+              "redis": {
+                "type": "string",
+                "enum": [
+                  "up",
+                  "down",
+                  "degraded"
+                ],
+                "description": "Redis 상태"
+              },
+              "email": {
+                "type": "string",
+                "enum": [
+                  "up",
+                  "down",
+                  "degraded"
+                ],
+                "description": "이메일 서비스 상태"
+              }
+            }
+          },
+          "uptime": {
+            "type": "number",
+            "description": "서버 가동 시간 (초)"
+          },
+          "version": {
+            "type": "string",
+            "description": "API 버전"
+          },
+          "memory": {
+            "type": "object",
+            "properties": {
+              "used": {
+                "type": "number",
+                "description": "사용 중인 메모리 (MB)"
+              },
+              "total": {
+                "type": "number",
+                "description": "전체 메모리 (MB)"
+              }
+            }
+          }
+        }
+      },
+      "PaginatedUsers": {
+        "type": "object",
+        "description": "페이지네이션된 사용자 목록",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/User"
+            }
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/Pagination"
+          }
+        }
+      },
+      "PaginatedSessions": {
+        "type": "object",
+        "description": "페이지네이션된 세션 목록",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Session"
+            }
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/Pagination"
+          }
+        }
+      },
+      "PaginatedSecurityLogs": {
+        "type": "object",
+        "description": "페이지네이션된 보안 로그 목록",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SecurityLog"
+            }
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/Pagination"
+          }
+        }
+      },
+      "Pagination": {
+        "type": "object",
+        "description": "페이지네이션 정보",
+        "properties": {
+          "total": {
+            "type": "integer",
+            "description": "전체 항목 수"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "페이지당 항목 수"
+          },
+          "offset": {
+            "type": "integer",
+            "description": "건너뛴 항목 수"
+          },
+          "page": {
+            "type": "integer",
+            "description": "현재 페이지 번호"
+          },
+          "totalPages": {
+            "type": "integer",
+            "description": "전체 페이지 수"
+          },
+          "hasNext": {
+            "type": "boolean",
+            "description": "다음 페이지 존재 여부"
+          },
+          "hasPrev": {
+            "type": "boolean",
+            "description": "이전 페이지 존재 여부"
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "description": "일반 오류 응답",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "오류 코드"
+          },
+          "message": {
+            "type": "string",
+            "description": "오류 메시지"
+          },
+          "code": {
+            "type": "string",
+            "description": "내부 오류 코드"
+          },
+          "details": {
+            "type": "object",
+            "description": "추가 오류 정보"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "오류 발생 시간"
+          },
+          "path": {
+            "type": "string",
+            "description": "오류가 발생한 API 경로"
+          }
+        },
+        "required": [
+          "error",
+          "message",
+          "timestamp"
+        ]
+      },
+      "ValidationError": {
+        "type": "object",
+        "description": "입력 검증 오류",
+        "properties": {
+          "error": {
+            "type": "string",
+            "default": "VALIDATION_ERROR"
+          },
+          "message": {
+            "type": "string",
+            "description": "검증 오류 메시지"
+          },
+          "fields": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "description": "필드별 오류 메시지"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "SuccessResponse": {
+        "type": "object",
+        "description": "성공 응답",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "default": true
+          },
+          "message": {
+            "type": "string",
+            "description": "성공 메시지"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/auth/signup": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "사용자 회원가입",
+        "description": "새로운 사용자 계정을 생성합니다. 이메일 인증이 필요할 수 있습니다.",
+        "operationId": "signup",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignupRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "회원가입 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "409": {
+            "description": "이메일 또는 사용자명 중복",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        }
+      }
+    },
+    "/auth/signin": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "사용자 로그인",
+        "description": "이메일과 비밀번호로 로그인합니다. 2FA가 활성화된 경우 코드가 필요합니다.",
+        "operationId": "signin",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SigninRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "로그인 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "description": "인증 실패 - 잘못된 이메일/비밀번호 또는 2FA 코드",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "계정 잠김",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "토큰 갱신",
+        "description": "리프레시 토큰을 사용하여 새로운 액세스 토큰을 발급받습니다.",
+        "operationId": "refreshToken",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshTokenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "토큰 갱신 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "description": "유효하지 않은 리프레시 토큰",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/signout": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "로그아웃",
+        "description": "현재 세션을 종료하고 토큰을 무효화합니다.",
+        "operationId": "signout",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "로그아웃 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/auth/signout-all": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "모든 디바이스에서 로그아웃",
+        "description": "사용자의 모든 활성 세션을 종료합니다.",
+        "operationId": "signoutAll",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "모든 세션 종료 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/auth/verify-email": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "이메일 인증",
+        "description": "이메일로 받은 인증 토큰으로 이메일 주소를 인증합니다.",
+        "operationId": "verifyEmail",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": true,
+            "description": "이메일로 받은 인증 토큰",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "이메일 인증 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "유효하지 않은 토큰",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/resend-verification": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "인증 이메일 재발송",
+        "description": "이메일 인증을 위한 메일을 다시 발송합니다.",
+        "operationId": "resendVerification",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "인증 이메일 발송 완료",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "이미 인증된 이메일",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        }
+      }
+    },
+    "/auth/password-reset": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "비밀번호 재설정 요청",
+        "description": "비밀번호 재설정을 위한 이메일을 발송합니다.",
+        "operationId": "requestPasswordReset",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordResetRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "재설정 이메일 발송 완료",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        }
+      }
+    },
+    "/auth/password-reset/confirm": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "비밀번호 재설정 확인",
+        "description": "토큰을 사용하여 새로운 비밀번호로 변경합니다.",
+        "operationId": "confirmPasswordReset",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordResetConfirm"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "비밀번호 재설정 완료",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "description": "유효하지 않은 토큰",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/2fa/setup": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "2FA 설정 시작",
+        "description": "TOTP 기반 2단계 인증 설정을 시작합니다.",
+        "operationId": "setup2FA",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "2FA 설정 정보",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TwoFactorSetup"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "409": {
+            "description": "이미 2FA가 활성화됨",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/2fa/verify": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "2FA 활성화",
+        "description": "TOTP 코드를 검증하여 2FA를 활성화합니다.",
+        "operationId": "verify2FA",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TwoFactorVerify"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "2FA 활성화 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "유효하지 않은 코드",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/auth/2fa/disable": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "2FA 비활성화",
+        "description": "2단계 인증을 비활성화합니다.",
+        "operationId": "disable2FA",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TwoFactorVerify"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "2FA 비활성화 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "유효하지 않은 코드",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/oauth/google": {
+      "get": {
+        "tags": [
+          "OAuth"
+        ],
+        "summary": "Google OAuth 로그인 시작",
+        "description": "Google OAuth 인증 프로세스를 시작합니다.",
+        "operationId": "initiateGoogleOAuth",
+        "parameters": [
+          {
+            "name": "redirect_uri",
+            "in": "query",
+            "description": "인증 완료 후 리다이렉트할 URL",
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Google 인증 페이지로 리다이렉트"
+          }
+        }
+      }
+    },
+    "/oauth/google/callback": {
+      "get": {
+        "tags": [
+          "OAuth"
+        ],
+        "summary": "Google OAuth 콜백",
+        "description": "Google OAuth 인증 완료 후 콜백 처리",
+        "operationId": "handleGoogleCallback",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "required": true,
+            "description": "Google에서 반환한 인증 코드",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "description": "CSRF 방지용 상태 값",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OAuth 인증 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "유효하지 않은 인증 코드",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/oauth/google/link": {
+      "post": {
+        "tags": [
+          "OAuth"
+        ],
+        "summary": "기존 계정에 Google 연결",
+        "description": "기존 사용자 계정에 Google 계정을 연결합니다.",
+        "operationId": "linkGoogleAccount",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "required": true,
+            "description": "Google 인증 코드",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "계정 연결 완료",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "유효하지 않은 코드",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "409": {
+            "description": "이미 다른 계정에 연결된 Google 계정",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/oauth/google/unlink": {
+      "delete": {
+        "tags": [
+          "OAuth"
+        ],
+        "summary": "Google 계정 연결 해제",
+        "description": "연결된 Google 계정을 해제합니다.",
+        "operationId": "unlinkGoogleAccount",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "연결 해제 완료",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "description": "연결된 Google 계정이 없음",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/me": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "내 프로필 조회",
+        "description": "현재 로그인된 사용자의 프로필 정보를 조회합니다.",
+        "operationId": "getMyProfile",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "프로필 조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "내 프로필 수정",
+        "description": "현재 로그인된 사용자의 프로필 정보를 수정합니다.",
+        "operationId": "updateMyProfile",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProfileRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "프로필 수정 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "409": {
+            "description": "사용자명 중복",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/me/password": {
+      "put": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "비밀번호 변경",
+        "description": "현재 비밀번호를 확인한 후 새로운 비밀번호로 변경합니다.",
+        "operationId": "changePassword",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "비밀번호 변경 완료",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "description": "현재 비밀번호가 일치하지 않음",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/me/deactivate": {
+      "post": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "계정 비활성화",
+        "description": "사용자 계정을 비활성화합니다. 이 작업은 되돌릴 수 있습니다.",
+        "operationId": "deactivateAccount",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "계정 비활성화 완료",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/users/me/delete": {
+      "delete": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "계정 삭제",
+        "description": "사용자 계정을 영구적으로 삭제합니다. 이 작업은 되돌릴 수 없습니다.",
+        "operationId": "deleteAccount",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "계정 삭제 완료",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/sessions": {
+      "get": {
+        "tags": [
+          "Sessions"
+        ],
+        "summary": "내 활성 세션 목록",
+        "description": "현재 사용자의 모든 활성 세션을 조회합니다.",
+        "operationId": "getMySessions",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/limitParam"
+          },
+          {
+            "$ref": "#/components/parameters/offsetParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "세션 목록 조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedSessions"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/sessions/{sessionId}": {
+      "delete": {
+        "tags": [
+          "Sessions"
+        ],
+        "summary": "특정 세션 종료",
+        "description": "지정된 세션을 종료합니다.",
+        "operationId": "terminateSession",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "description": "종료할 세션 ID",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "세션 종료 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/security/logs": {
+      "get": {
+        "tags": [
+          "Security"
+        ],
+        "summary": "내 보안 로그 조회",
+        "description": "현재 사용자의 보안 관련 활동 로그를 조회합니다.",
+        "operationId": "getMySecurityLogs",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/limitParam"
+          },
+          {
+            "$ref": "#/components/parameters/offsetParam"
+          },
+          {
+            "name": "eventType",
+            "in": "query",
+            "description": "필터링할 이벤트 타입",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "login_success",
+                "login_failed",
+                "logout",
+                "password_changed",
+                "profile_updated",
+                "email_verified",
+                "2fa_enabled",
+                "2fa_disabled"
+              ]
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "description": "시작 날짜 (ISO 8601)",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "description": "종료 날짜 (ISO 8601)",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "보안 로그 조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedSecurityLogs"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/notifications/settings": {
+      "get": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "알림 설정 조회",
+        "description": "현재 사용자의 알림 설정을 조회합니다.",
+        "operationId": "getNotificationSettings",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "알림 설정 조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationSettings"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "알림 설정 변경",
+        "description": "사용자의 알림 설정을 변경합니다.",
+        "operationId": "updateNotificationSettings",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotificationSettings"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "알림 설정 변경 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationSettings"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api-keys": {
+      "get": {
+        "tags": [
+          "API Keys"
+        ],
+        "summary": "내 API 키 목록",
+        "description": "현재 사용자의 API 키 목록을 조회합니다.",
+        "operationId": "getMyApiKeys",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/limitParam"
+          },
+          {
+            "$ref": "#/components/parameters/offsetParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "API 키 목록 조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ApiKey"
+                      }
+                    },
+                    "pagination": {
+                      "$ref": "#/components/schemas/Pagination"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "API Keys"
+        ],
+        "summary": "새 API 키 생성",
+        "description": "새로운 API 키를 생성합니다.",
+        "operationId": "createApiKey",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateApiKeyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "API 키 생성 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiKey"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "key": {
+                          "type": "string",
+                          "description": "생성된 API 키 (한 번만 표시됨)"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api-keys/{keyId}": {
+      "delete": {
+        "tags": [
+          "API Keys"
+        ],
+        "summary": "API 키 삭제",
+        "description": "지정된 API 키를 삭제합니다.",
+        "operationId": "deleteApiKey",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "keyId",
+            "in": "path",
+            "required": true,
+            "description": "삭제할 API 키 ID",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "API 키 삭제 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/admin/users": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "사용자 목록 조회 (관리자)",
+        "description": "모든 사용자 목록을 조회합니다. 관리자 권한이 필요합니다.",
+        "operationId": "getAllUsers",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/limitParam"
+          },
+          {
+            "$ref": "#/components/parameters/offsetParam"
+          },
+          {
+            "$ref": "#/components/parameters/searchParam"
+          },
+          {
+            "name": "role",
+            "in": "query",
+            "description": "역할별 필터링",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "user",
+                "admin",
+                "moderator"
+              ]
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "상태별 필터링",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "active",
+                "inactive",
+                "suspended",
+                "deleted"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "사용자 목록 조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedUsers"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/admin/users/{userId}": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "특정 사용자 조회 (관리자)",
+        "description": "특정 사용자의 상세 정보를 조회합니다.",
+        "operationId": "getUserById",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "description": "조회할 사용자 ID",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "사용자 조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/admin/users/{userId}/role": {
+      "put": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "사용자 역할 변경 (관리자)",
+        "description": "특정 사용자의 역할을 변경합니다.",
+        "operationId": "updateUserRole",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "description": "역할을 변경할 사용자 ID",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "role"
+                ],
+                "properties": {
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "user",
+                      "admin",
+                      "moderator"
+                    ],
+                    "description": "새로운 역할"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "역할 변경 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/admin/users/{userId}/suspend": {
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "사용자 계정 정지 (관리자)",
+        "description": "특정 사용자의 계정을 정지합니다.",
+        "operationId": "suspendUser",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "description": "정지할 사용자 ID",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "description": "정지 사유"
+                  },
+                  "until": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "정지 해제 시간 (선택사항)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "계정 정지 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/admin/users/{userId}/unsuspend": {
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "사용자 계정 정지 해제 (관리자)",
+        "description": "정지된 사용자 계정을 활성화합니다.",
+        "operationId": "unsuspendUser",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "description": "정지 해제할 사용자 ID",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "정지 해제 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/admin/security/logs": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "전체 보안 로그 조회 (관리자)",
+        "description": "모든 사용자의 보안 로그를 조회합니다.",
+        "operationId": "getAllSecurityLogs",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/limitParam"
+          },
+          {
+            "$ref": "#/components/parameters/offsetParam"
+          },
+          {
+            "name": "userId",
+            "in": "query",
+            "description": "특정 사용자 ID로 필터링",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "eventType",
+            "in": "query",
+            "description": "이벤트 타입으로 필터링",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ipAddress",
+            "in": "query",
+            "description": "IP 주소로 필터링",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "보안 로그 조회 성공",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedSecurityLogs"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "시스템 상태 확인",
+        "description": "API 서버와 의존성 서비스들의 상태를 확인합니다.",
+        "operationId": "getHealthStatus",
+        "responses": {
+          "200": {
+            "description": "시스템 정상",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthStatus"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "시스템 장애",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Authentication",
+      "description": "인증 관련 API - 회원가입, 로그인, 토큰 관리, 2FA"
+    },
+    {
+      "name": "OAuth",
+      "description": "OAuth 인증 - Google 등 외부 서비스 연동"
+    },
+    {
+      "name": "Users",
+      "description": "사용자 관리 - 프로필, 비밀번호, 계정 설정"
+    },
+    {
+      "name": "Sessions",
+      "description": "세션 관리 - 활성 세션 조회 및 제어"
+    },
+    {
+      "name": "Security",
+      "description": "보안 관리 - 로그인 기록, 보안 이벤트"
+    },
+    {
+      "name": "Notifications",
+      "description": "알림 설정 - 이메일, 푸시 알림 관리"
+    },
+    {
+      "name": "API Keys",
+      "description": "API 키 관리 - 서비스 간 인증용 키"
+    },
+    {
+      "name": "Admin",
+      "description": "관리자 기능 - 사용자 관리, 시스템 제어"
+    },
+    {
+      "name": "Health",
+      "description": "시스템 상태 - 헬스체크, 모니터링"
+    }
+  ]
+}
