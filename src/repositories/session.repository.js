@@ -1,9 +1,16 @@
-const Session = require('../models/session.model');
+const { getSessionModel } = require('../models/session.model');
 
 /**
  * Session 리포지토리 - 세션 데이터 액세스 계층
  */
 class SessionRepository {
+  /**
+   * Session 모델을 지연 로딩으로 가져오기
+   */
+  getModel() {
+    return getSessionModel();
+  }
+
   /**
    * 사용자 ID로 세션 찾기
    * @param {string} userId - 사용자 ID
@@ -13,30 +20,64 @@ class SessionRepository {
    * @returns {Promise<Object>} 세션 목록과 페이지네이션 정보
    */
   async findByUserId(userId, activeOnly = true, limit = 20, offset = 0) {
-    const filter = { userId };
-    if (activeOnly) {
-      filter.isActive = true;
-      filter.expiresAt = { $gt: new Date() };
-    }
+    const Session = this.getModel();
+    const dbConfig = require('../config/database').dbConfig;
     
-    const total = await Session.countDocuments(filter);
-    const sessions = await Session.find(filter)
-      .sort({ lastAccessAt: -1 })
-      .skip(offset)
-      .limit(limit);
-    
-    return {
-      data: sessions,
-      pagination: {
-        total,
-        limit,
-        offset,
-        page: Math.floor(offset / limit) + 1,
-        totalPages: Math.ceil(total / limit),
-        hasNext: offset + limit < total,
-        hasPrev: offset > 0
+    if (dbConfig.defaultType === 'mongodb') {
+      // MongoDB 쿼리
+      const filter = { userId };
+      if (activeOnly) {
+        filter.isActive = true;
+        filter.expiresAt = { $gt: new Date() };
       }
-    };
+      
+      const total = await Session.countDocuments(filter);
+      const sessions = await Session.find(filter)
+        .sort({ lastAccessAt: -1 })
+        .skip(offset)
+        .limit(limit);
+      
+      return {
+        data: sessions,
+        pagination: {
+          total,
+          limit,
+          offset,
+          page: Math.floor(offset / limit) + 1,
+          totalPages: Math.ceil(total / limit),
+          hasNext: offset + limit < total,
+          hasPrev: offset > 0
+        }
+      };
+    } else {
+      // Sequelize 쿼리
+      const { Op } = require('sequelize');
+      const filter = { userId };
+      if (activeOnly) {
+        filter.isActive = true;
+        filter.expiresAt = { [Op.gt]: new Date() };
+      }
+      
+      const { count, rows } = await Session.findAndCountAll({
+        where: filter,
+        order: [['lastAccessAt', 'DESC']],
+        offset,
+        limit
+      });
+      
+      return {
+        data: rows,
+        pagination: {
+          total: count,
+          limit,
+          offset,
+          page: Math.floor(offset / limit) + 1,
+          totalPages: Math.ceil(count / limit),
+          hasNext: offset + limit < count,
+          hasPrev: offset > 0
+        }
+      };
+    }
   }
 
   /**
@@ -45,7 +86,21 @@ class SessionRepository {
    * @returns {Promise<Session>} 세션 객체
    */
   async findByToken(token) {
-    return await Session.findOne({ token, isActive: true, expiresAt: { $gt: new Date() } });
+    const Session = this.getModel();
+    const dbConfig = require('../config/database').dbConfig;
+    
+    if (dbConfig.defaultType === 'mongodb') {
+      return await Session.findOne({ token, isActive: true, expiresAt: { $gt: new Date() } });
+    } else {
+      const { Op } = require('sequelize');
+      return await Session.findOne({
+        where: {
+          token,
+          isActive: true,
+          expiresAt: { [Op.gt]: new Date() }
+        }
+      });
+    }
   }
 
   /**
@@ -54,7 +109,14 @@ class SessionRepository {
    * @returns {Promise<Session>} 세션 객체
    */
   async findById(id) {
-    return await Session.findById(id);
+    const Session = this.getModel();
+    const dbConfig = require('../config/database').dbConfig;
+    
+    if (dbConfig.defaultType === 'mongodb') {
+      return await Session.findById(id);
+    } else {
+      return await Session.findByPk(id);
+    }
   }
 
   /**
@@ -63,8 +125,15 @@ class SessionRepository {
    * @returns {Promise<Session>} 생성된 세션 객체
    */
   async create(sessionData) {
-    const session = new Session(sessionData);
-    return await session.save();
+    const Session = this.getModel();
+    const dbConfig = require('../config/database').dbConfig;
+    
+    if (dbConfig.defaultType === 'mongodb') {
+      const session = new Session(sessionData);
+      return await session.save();
+    } else {
+      return await Session.create(sessionData);
+    }
   }
 
   /**
@@ -73,7 +142,18 @@ class SessionRepository {
    * @returns {Promise<Session>} 업데이트된 세션 객체
    */
   async deactivate(id) {
-    return await Session.findByIdAndUpdate(id, { isActive: false }, { new: true });
+    const Session = this.getModel();
+    const dbConfig = require('../config/database').dbConfig;
+    
+    if (dbConfig.defaultType === 'mongodb') {
+      return await Session.findByIdAndUpdate(id, { isActive: false }, { new: true });
+    } else {
+      const [updatedRowsCount, updatedRows] = await Session.update(
+        { isActive: false },
+        { where: { id }, returning: true }
+      );
+      return updatedRowsCount > 0 ? updatedRows[0] : null;
+    }
   }
 
   /**
@@ -82,10 +162,20 @@ class SessionRepository {
    * @returns {Promise<Object>} 업데이트 결과
    */
   async deactivateAllForUser(userId) {
-    return await Session.updateMany(
-      { userId, isActive: true },
-      { isActive: false }
-    );
+    const Session = this.getModel();
+    const dbConfig = require('../config/database').dbConfig;
+    
+    if (dbConfig.defaultType === 'mongodb') {
+      return await Session.updateMany(
+        { userId, isActive: true },
+        { isActive: false }
+      );
+    } else {
+      return await Session.update(
+        { isActive: false },
+        { where: { userId, isActive: true } }
+      );
+    }
   }
 
   /**
@@ -95,7 +185,18 @@ class SessionRepository {
    * @returns {Promise<Session>} 업데이트된 세션 객체
    */
   async update(id, updateData) {
-    return await Session.findByIdAndUpdate(id, updateData, { new: true });
+    const Session = this.getModel();
+    const dbConfig = require('../config/database').dbConfig;
+    
+    if (dbConfig.defaultType === 'mongodb') {
+      return await Session.findByIdAndUpdate(id, updateData, { new: true });
+    } else {
+      const [updatedRowsCount, updatedRows] = await Session.update(
+        updateData,
+        { where: { id }, returning: true }
+      );
+      return updatedRowsCount > 0 ? updatedRows[0] : null;
+    }
   }
 
   /**
@@ -103,12 +204,27 @@ class SessionRepository {
    * @returns {Promise<Object>} 정리 결과
    */
   async cleanupExpiredSessions() {
-    return await Session.deleteMany({
-      $or: [
-        { expiresAt: { $lt: new Date() } },
-        { isActive: false }
-      ]
-    });
+    const Session = this.getModel();
+    const dbConfig = require('../config/database').dbConfig;
+    
+    if (dbConfig.defaultType === 'mongodb') {
+      return await Session.deleteMany({
+        $or: [
+          { expiresAt: { $lt: new Date() } },
+          { isActive: false }
+        ]
+      });
+    } else {
+      const { Op } = require('sequelize');
+      return await Session.destroy({
+        where: {
+          [Op.or]: [
+            { expiresAt: { [Op.lt]: new Date() } },
+            { isActive: false }
+          ]
+        }
+      });
+    }
   }
 }
 

@@ -59,11 +59,24 @@ const connectDB = async () => {
       
       // 모델 초기화 및 동기화
       const { initUserModel } = require('../models/user.model');
+      const { initSessionModel } = require('../models/session.model');
+      const { initSecurityLogModel } = require('../models/security-log.model');
+      const { initApiKeyModel } = require('../models/api-key.model');
+      const { initNotificationSettingsModel } = require('../models/notification-settings.model');
+      
       const User = initUserModel(global.sequelize);
+      const Session = initSessionModel(global.sequelize);
+      const SecurityLog = initSecurityLogModel(global.sequelize);
+      const ApiKey = initApiKeyModel(global.sequelize);
+      const NotificationSettings = initNotificationSettingsModel(global.sequelize);
       
       // 모델들을 global.models에 저장하여 다른 곳에서 접근 가능하도록 함
       global.models = {
-        User
+        User,
+        Session,
+        SecurityLog,
+        ApiKey,
+        NotificationSettings
       };
       
       // 테이블 동기화
