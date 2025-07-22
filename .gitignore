@@ -1,3 +1,5 @@
 node_modules/
 # Test generated apps
 my-*/
+data/
+# Logs
