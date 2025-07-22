@@ -306,4 +306,9 @@ const getUserModel = () => {
   return initUserModel(global.sequelize);
 };
 
-module.exports = getUserModel();
+// 모델을 지연 로딩하도록 객체로 래핑
+module.exports = {
+  getUserModel,
+  initUserModel,
+  createMongooseModel
+};

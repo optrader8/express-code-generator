@@ -57,8 +57,18 @@ const connectDB = async () => {
       await global.sequelize.authenticate();
       console.log('SQLite connected successfully');
       
-      // 모델 동기화 (실제 구현에서는 모델을 불러와서 sync 해야 함)
-      // await sequelize.sync();
+      // 모델 초기화 및 동기화
+      const { initUserModel } = require('../models/user.model');
+      const User = initUserModel(global.sequelize);
+      
+      // 모델들을 global.models에 저장하여 다른 곳에서 접근 가능하도록 함
+      global.models = {
+        User
+      };
+      
+      // 테이블 동기화
+      await global.sequelize.sync();
+      console.log('Database tables synchronized');
     } else {
       throw new Error(`Unsupported database type: ${dbType}`);
     }

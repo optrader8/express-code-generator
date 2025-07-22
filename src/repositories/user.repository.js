@@ -1,4 +1,4 @@
-const User = require('../models/user.model');
+const { getUserModel } = require('../models/user.model');
 const bcrypt = require('bcryptjs');
 
 /**
@@ -6,12 +6,20 @@ const bcrypt = require('bcryptjs');
  */
 class UserRepository {
   /**
+   * User 모델을 지연 로딩으로 가져오기
+   */
+  getModel() {
+    return getUserModel();
+  }
+
+  /**
    * 이메일로 사용자 찾기
    * @param {string} email - 사용자 이메일
    * @returns {Promise<User>} 사용자 객체
    */
   async findByEmail(email) {
-    return await User.findOne({ email });
+    const User = this.getModel();
+    return await User.findOne({ where: { email } });
   }
 
   /**
@@ -20,7 +28,8 @@ class UserRepository {
    * @returns {Promise<User>} 사용자 객체
    */
   async findById(id) {
-    return await User.findById(id);
+    const User = this.getModel();
+    return await User.findByPk(id);
   }
 
   /**
@@ -29,7 +38,8 @@ class UserRepository {
    * @returns {Promise<User>} 사용자 객체
    */
   async findByUsername(username) {
-    return await User.findOne({ username });
+    const User = this.getModel();
+    return await User.findOne({ where: { username } });
   }
 
   /**
@@ -38,14 +48,8 @@ class UserRepository {
    * @returns {Promise<User>} 생성된 사용자 객체
    */
   async create(userData) {
-    // 비밀번호 해싱
-    if (userData.password) {
-      const salt = await bcrypt.genSalt(10);
-      userData.password = await bcrypt.hash(userData.password, salt);
-    }
-    
-    const user = new User(userData);
-    return await user.save();
+    const User = this.getModel();
+    return await User.create(userData);
   }
 
   /**
@@ -55,13 +59,13 @@ class UserRepository {
    * @returns {Promise<User>} 업데이트된 사용자 객체
    */
   async update(id, updateData) {
-    // 비밀번호가 포함된 경우 해싱
-    if (updateData.password) {
-      const salt = await bcrypt.genSalt(10);
-      updateData.password = await bcrypt.hash(updateData.password, salt);
-    }
+    const User = this.getModel();
+    const [updatedRowsCount, updatedRows] = await User.update(updateData, {
+      where: { id },
+      returning: true
+    });
     
-    return await User.findByIdAndUpdate(id, updateData, { new: true });
+    return updatedRowsCount > 0 ? updatedRows[0] : null;
   }
 
   /**
@@ -70,8 +74,9 @@ class UserRepository {
    * @returns {Promise<boolean>} 삭제 성공 여부
    */
   async delete(id) {
-    const result = await User.findByIdAndDelete(id);
-    return !!result;
+    const User = this.getModel();
+    const result = await User.destroy({ where: { id } });
+    return result > 0;
   }
 
   /**
@@ -81,7 +86,7 @@ class UserRepository {
    * @returns {Promise<User>} 업데이트된 사용자 객체
    */
   async updateStatus(id, status) {
-    return await User.findByIdAndUpdate(id, { status }, { new: true });
+    return await this.update(id, { status });
   }
 
   /**
@@ -92,21 +97,23 @@ class UserRepository {
    * @returns {Promise<Object>} 사용자 목록과 페이지네이션 정보
    */
   async findAll(filter = {}, limit = 20, offset = 0) {
-    const total = await User.countDocuments(filter);
-    const users = await User.find(filter)
-      .sort({ createdAt: -1 })
-      .skip(offset)
-      .limit(limit);
+    const User = this.getModel();
+    const { count, rows } = await User.findAndCountAll({
+      where: filter,
+      order: [['createdAt', 'DESC']],
+      offset,
+      limit
+    });
     
     return {
-      data: users,
+      data: rows,
       pagination: {
-        total,
+        total: count,
         limit,
         offset,
         page: Math.floor(offset / limit) + 1,
-        totalPages: Math.ceil(total / limit),
-        hasNext: offset + limit < total,
+        totalPages: Math.ceil(count / limit),
+        hasNext: offset + limit < count,
         hasPrev: offset > 0
       }
     };
@@ -119,7 +126,7 @@ class UserRepository {
    * @returns {Promise<boolean>} 비밀번호 일치 여부
    */
   async verifyPassword(user, password) {
-    return await bcrypt.compare(password, user.password);
+    return await user.comparePassword(password);
   }
 }
 
